@@ -28,3 +28,13 @@ This will populate the SQLMap Scanner tab of the plugin with information about t
 If the page is vulnerable to SQL injection, then a thread from the plugin will poll the results and add them to the Scanner Results tab.
 
 For more information, see the post here: https://www.codewatch.org/blog/?p=402
+
+
+Updates
+=====
+
+SQLipy is now working for BurpFree edition and new features added :
+
+1 - constant API IP,PORT
+2 - New Result Panel .
+3 - System Notification with SQLi findings 
