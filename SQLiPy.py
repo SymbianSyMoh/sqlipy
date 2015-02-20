@@ -150,17 +150,17 @@ class ThreadExtender(IBurpExtender, IContextMenuFactory, ITab, IScannerCheck):
                     firstpayload = True
                     for k in items['data']:
                       if firstpayload:
-                        payloads = '<li>'+items['data'][k]['payload']+'</li>'
+                        payloads = items['data'][k]['payload']+'\n'
                         firstpayload = False
                       else:
-                        payloads = payloads + '<li>'+items['data'][k]['payload']+'</li>'
+                        payloads = payloads + items['data'][k]['payload']+'\n'
 
                     if firstpayload == False:
-                      payloads = '<ul>' + payloads + '</ul><BR>'
+                      payloads = payloads 
 
                 # Get banner info
                 if findings['type'] == 2:
-                  banner = findings['value']+'<BR>'
+                  banner = findings['value']+'\n'
 
                 # Get Current Users
                 elif findings['type'] == 3:
@@ -186,13 +186,13 @@ class ThreadExtender(IBurpExtender, IContextMenuFactory, ITab, IScannerCheck):
                   firstuser = True
                   for user in findings['value']:
                     if firstuser:
-                      lusers = '<li>'+user+'</li>'
+                      lusers = user
                       firstuser = False
                     else:
-                      lusers = lusers + '<li>'+user+'</li>'
+                      lusers = lusers + '\t'+user+'\n'
 
                   if firstuser == False:
-                    lusers = 'Users:<ul>' + lusers + '</ul><BR>'
+                    lusers = 'Users:\t' + lusers + '\n'
 
                 # Get list of passwords
                 elif findings['type'] == 8:
@@ -297,15 +297,19 @@ class ThreadExtender(IBurpExtender, IContextMenuFactory, ITab, IScannerCheck):
               if vulnerable:
                 scanIssue = SqlMapScanIssue(self.httpmessage.getHttpService(), self.url, [self.httpmessage], 'SQLMap Scan Finding',
                     'The application has been found to be vulnerable to SQL injection by SQLMap.  The following payloads successfully identified SQL injection vulnerabilities:<p>'+payloads+'</p><p>Enumerated Data:</p><BR><p>'+dbtype+': '+banner+'</p><p>'+cu+'</p><p>'+cdb+'</p><p>'+hostname+'</p><p>'+isdba+'</p><p>'+lusers+'</p><p>'+lpswds+'</p><p>'+lprivs+'</p><p>'+lroles+'</p><p>'+ldbs+'</p>', 'Certain', 'High')
-                self.cbacks.addScanIssue(scanIssue)
+
+                #self.cbacks.addScanIssue(scanIssue)
+                self.burpobject.jTextResult.append(str(scanIssue.getUrl())+' The application has been found to be vulnerable to SQL injection by SQLMap.  The following payloads successfully identified SQL injection vulnerabilities:\n'+payloads+'\nEnumerated Data:\t'+dbtype+': '+banner+'\n'+cu+'\n'+cdb+'\n'+hostname+'\n'+isdba+'\n'+lusers+'\n'+lpswds+'\n'+lprivs+'\n'+lroles+'\n'+ldbs+'+++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
+                subprocess.call("notify-send --urgency=critical --expire-time=300 'PingOoO : SQLi Bug is waiting for you'", shell=True) #For linux only (notification send)
                 print 'SQLi vulnerabilities were found for task '+self.sqlmaptask+' and have been reported.\n'
               else:
                 print 'Scan completed for task '+self.sqlmaptask+' but SQLi vulnerabilities were not found.\n'
 
               break
 
-            except:
+            except Exception,e:
               print 'No results for SQLMap task: '+self.sqlmaptask+'\n'
+              print(str(e) + '\n')
               break
 
           else:
@@ -418,8 +422,8 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, ITab):
     self._jLabelScanText = swing.JLabel()
     self._jLabelScanIPListen = swing.JLabel()
     self._jLabelScanPortListen = swing.JLabel()
-    self._jTextFieldScanIPListen = swing.JTextField()
-    self._jTextFieldScanPortListen = swing.JTextField()
+    self._jTextFieldScanIPListen = swing.JTextField("127.0.0.1")
+    self._jTextFieldScanPortListen = swing.JTextField("8081")
     self._jSeparator1 = swing.JSeparator()
     self._jLabelURL = swing.JLabel()
     self._jTextFieldURL = swing.JTextField()
@@ -680,7 +684,16 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, ITab):
     # Create SQLMap stop scan JPanel
     self._jStopScanPanel = swing.JPanel()
     self._jStopScanPanel.setLayout(None)
-
+    # Create SQLMap Result scan JPanel
+    self._jResultScanPanel = swing.JPanel()
+    self._jResultScanPanel.setLayout(None)
+    # Create label, combobox, and button to get Results and textarea to display them
+    self.jTextResult = swing.JTextArea()
+    self.jTextResult.setColumns(50)
+    self.jTextResult.setRows(50)
+    self.jTextResult.setLineWrap(True)
+    self.jTextResult.setEditable(False)
+    self._jResultScanPanel = swing.JScrollPane(self.jTextResult)
     # Create label, combobox, and button to stop scans and textfield to display success
     self._jLabelStopScan = swing.JLabel("Stop Scan ID:")
     self._jComboStopScan = swing.JComboBox(self.scantasks)
@@ -700,12 +713,16 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, ITab):
     self._jStopScanPanel.add(self._jButtonRemoveScan)
     self._jStopScanPanel.add(self._jLabelStopStatus)
 
+
+
     # Setup Tabs
     self._jConfigTab = swing.JTabbedPane()
     self._jConfigTab.addTab("SQLMap API", self._jPanel)
     self._jConfigTab.addTab("SQLMap Scanner", self._jScrollPaneMain)
     self._jConfigTab.addTab("SQLMap Logs", self._jLogPanel)
     self._jConfigTab.addTab("SQLMap Scan Stop", self._jStopScanPanel)
+    self._jConfigTab.addTab("SQLMap Scan Results", self._jResultScanPanel)
+
 
     callbacks.customizeUiComponent(self._jConfigTab)
     callbacks.addSuiteTab(self)
@@ -767,7 +784,7 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, ITab):
         print 'Failed to add data to scan tab.'
 
   def printHeader(self):
-    print 'SQLiPy\nBurp interface to SQLMap via the SQLMap API\njosh.berry@codewatch.org\n\n'
+    print 'SQLiPy\nBurp interface to SQLMap via the SQLMap API\njosh.berry@codewatch.org\n\n Now working for free edition : Edited by Ahmed Sherif (ahmadsherif24@gmail.com) \n'
 
   def setAPI(self, e):
     selectFile = swing.JFileChooser()
@@ -993,10 +1010,11 @@ class BurpExtender(IBurpExtender, IContextMenuFactory, ITab):
       paramcmd = ' -p "' + self._jTextFieldParam.getText() + '"'
 
     try:
-      sqlmapcmd = 'sqlmap.py -u "' + self._jTextFieldURL.getText()  +  '"' + datacmd + cookiecmd + uacmd + referercmd + proxycmd + ' --delay=' + str(self._jComboDelay.getSelectedItem()) + ' --timeout=' + str(self._jComboTimeout.getSelectedItem()) + ' --retries=' + str(self._jComboDelay.getSelectedItem()) + paramcmd + dbmscmd + oscmd + tampercmd + ' --level=' + str(self._jComboLevel.getSelectedItem()) + ' --risk=' + str(self._jComboRisk.getSelectedItem()) + textonly + hpp + ' --threads=' + str(self._jComboThreads.getSelectedItem()) + ' --time-sec=' + str(self._jComboTimeSec.getSelectedItem()) + ' -b' + cu + cdb + hostname + isdba + lusers + lpswds + lprivs + lroles + ldbs + ' --batch --answers="crack=N,dict=N"\n\n'
+      sqlmapcmd = 'sqlmap2 -u "' + self._jTextFieldURL.getText()  +  '"' + datacmd + cookiecmd + uacmd + referercmd + proxycmd + ' --delay=' + str(self._jComboDelay.getSelectedItem()) + ' --timeout=' + str(self._jComboTimeout.getSelectedItem()) + ' --retries=' + str(self._jComboDelay.getSelectedItem()) + paramcmd + dbmscmd + oscmd + tampercmd + ' --level=' + str(self._jComboLevel.getSelectedItem()) + ' --risk=' + str(self._jComboRisk.getSelectedItem()) + textonly + hpp + ' --threads=' + str(self._jComboThreads.getSelectedItem()) + ' --time-sec=' + str(self._jComboTimeSec.getSelectedItem()) + ' -b' + cu + cdb + hostname + isdba + lusers + lpswds + lprivs + lroles + ldbs + ' --batch --answers="crack=N,dict=N"\n\n'
       print 'SQLMap Command: ' + sqlmapcmd
       req = urllib2.Request('http://' + self._jTextFieldScanIPListen.getText() + ':' + self._jTextFieldScanPortListen.getText() + '/task/new')
       resp = json.load(urllib2.urlopen(req))
+      print resp
 
       if resp['success'] == True:
         sqlitask = resp['taskid']
