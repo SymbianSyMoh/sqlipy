@@ -5,7 +5,7 @@ Date:           9/3/2014
 Author:         Josh Berry - josh.berry@codewatch.org
 Github:         https://github.com/codewatchorg/sqlipy
 
-Description:    This plugin leverages the SQLMap API to initiate SQLMap scans against the target.
+Description:    This plugin leverages the SQLMap API (Free Edition) to initiate SQLMap scans against the target.
 
 This plugin requires the beta version of Jython as it uses the JSON module.
 
